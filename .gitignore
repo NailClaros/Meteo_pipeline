@@ -1,5 +1,7 @@
 .env
 ex.py
-data_folder/*
+data/*
 venv/
 __pycache__/
+.cache/
+.cache.sqlite
