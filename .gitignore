@@ -1,0 +1,5 @@
+.env
+ex.py
+data_folder/*
+venv/
+__pycache__/
