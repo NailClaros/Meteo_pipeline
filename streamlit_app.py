@@ -3,15 +3,13 @@ import psycopg2
 import pandas as pd
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 
 load_dotenv()
-
 DB_URL = os.getenv("DB_URL")
 
 st.set_page_config(layout="wide")
 st.title("🌤️ Weather Dashboard")
-st.write("Live hourly weather metrics from Charlotte, Raleigh, and Greensboro, NC.")
+st.write("Live hourly weather metrics from North Carolina cities.")
 
 # Connect to NeonDB
 conn = psycopg2.connect(DB_URL)
@@ -27,34 +25,42 @@ conn.close()
 df['time'] = pd.to_datetime(df['time'])
 df['hour'] = df['time'].dt.hour
 
-# Sidebar filters
-st.sidebar.header("Filter Weather Variables")
-selected_vars = st.sidebar.multiselect(
-    "Select metrics to show:",
-    ["temp_F", "cloud_cover_perc", "surface_pressure", "wind_speed_80m_mph", "wind_direction_80m_deg"],
-    default=["temp_F"]
-)
+# Discover real location_id values from your data
+available_locations = df['location_id'].unique()
 
-locations = {
-    "CLT": "Charlotte, NC",
-    "RAL": "Raleigh, NC",
-    "GSB": "Greensboro, NC"
+# Rename columns for human readability
+COLUMN_RENAMES = {
+    "temp_F": "Temperature (°F)",
+    "cloud_cover_perc": "Cloud Cover (%)",
+    "surface_pressure": "Surface Pressure (hPa)",
+    "wind_speed_80m_mph": "Wind Speed @80m (mph)",
+    "wind_direction_80m_deg": "Wind Direction @80m (°)"
 }
+REVERSE_RENAMES = {v: k for k, v in COLUMN_RENAMES.items()}
 
-col1, col2, col3 = st.columns(3)
+# Sidebar filters
+st.sidebar.header("Select Weather Metrics")
+selected_labels = st.sidebar.multiselect(
+    "Choose metrics to show:",
+    options=list(COLUMN_RENAMES.values()),
+    default=["Temperature (°F)"]
+)
+selected_vars = [REVERSE_RENAMES[label] for label in selected_labels]
 
-for i, (loc_id, loc_name) in enumerate(locations.items()):
-    city_df = df[df['location_id'] == loc_id]
+# Layout for charts
+columns = st.columns(3)
 
+for i, loc_id in enumerate(available_locations):
+    city_df = df[df["location_id"] == loc_id]
     if city_df.empty:
-        chart = "No data for " + loc_name
+        with columns[i % 3]:
+            st.subheader(f"{loc_id} (No Data)")
+            st.warning("⚠️ No data available.")
     else:
-        chart_data = city_df.pivot_table(index='hour', values=selected_vars, aggfunc='mean')
-        chart = st.line_chart(chart_data)
+        chart_data = city_df.groupby("hour")[selected_vars].mean()
+        chart_data.rename(columns=COLUMN_RENAMES, inplace=True)
 
-    with [col1, col2, col3][i]:
-        st.subheader(loc_name)
-        if isinstance(chart, str):
-            st.write(chart)
-        else:
+        with columns[i % 3]:
+            st.subheader(f"📍 {loc_id}")
             st.line_chart(chart_data)
+
