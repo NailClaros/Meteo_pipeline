@@ -11,22 +11,22 @@ load_dotenv()
 
 LAKE_BUCKET = os.getenv("BUCKET_NAME")
 
-def fetch_and_save_weather_data(date=None):
+def fetch_and_save_weather_data(date=None, forecast_length=1, past_days=0):
     # Create data folder if it doesn't exist
     os.makedirs("data", exist_ok=True)    
 
     if date is None:
         date = datetime.now()
-
-    date_str = date.strftime("%Y-%m-%d")
-    filename = f"weather_{date_str}.csv"
+        date = date.strftime("%Y-%m-%d")
+    
+    filename = f"weather_{date}.csv"
     output_path = os.path.join("data", filename)
 
     file_exists_local = os.path.exists(output_path)
-    file_exists_cloud = file_exists_in_s3(bucket_name=LAKE_BUCKET, key=f"weather_{date_str}.csv")
+    file_exists_cloud = file_exists_in_s3(bucket_name=LAKE_BUCKET, key=f"weather_{date}.csv")
 
     if file_exists_local or file_exists_cloud:
-        print(f"Data for {date_str} already exists locally or in S3. Skipping fetch.")
+        print(f"Data for {date} already exists locally or in S3. Skipping fetch.")
         print(f"Local file exists: {file_exists_local}\nCloud file exists: {file_exists_cloud}")
         return
 
@@ -49,7 +49,8 @@ def fetch_and_save_weather_data(date=None):
         "longitude": [loc["longitude"] for loc in locations],
         "hourly": ["temperature_2m", "cloud_cover", "surface_pressure", "wind_speed_80m", "wind_direction_80m"],
         "timezone": "auto",
-        "forecast_days": 1,
+        "forecast_days": forecast_length,
+        "past_days": past_days,
         "wind_speed_unit": "mph",
         "temperature_unit": "fahrenheit",
         "precipitation_unit": "inch",
