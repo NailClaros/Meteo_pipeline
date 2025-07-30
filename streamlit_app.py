@@ -8,7 +8,7 @@ load_dotenv()
 DB_URL = os.getenv("DB_URL")
 
 st.set_page_config(layout="wide")
-st.title("🌤️ Weather Dashboard")
+st.title("🌤️ Nail's Weather Dashboard")
 st.write("Live hourly weather metrics from North Carolina cities.")
 
 # Connect to NeonDB
