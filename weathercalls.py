@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from aws_examp.awsfuncs import file_exists_in_s3
+from awsfuncs import file_exists_in_s3
 import openmeteo_requests
 import pandas as pd
 import requests_cache
@@ -11,18 +11,22 @@ load_dotenv()
 
 LAKE_BUCKET = os.getenv("BUCKET_NAME")
 
-def fetch_and_save_weather_data():
+def fetch_and_save_weather_data(date=None):
     # Create data folder if it doesn't exist
     os.makedirs("data", exist_ok=True)    
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    output_path = f"data/weather_{today_str}.csv"
+    if date is None:
+        date = datetime.now()
+
+    date_str = date.strftime("%Y-%m-%d")
+    filename = f"weather_{date_str}.csv"
+    output_path = os.path.join("data", filename)
 
     file_exists_local = os.path.exists(output_path)
-    file_exists_cloud = file_exists_in_s3(bucket_name=LAKE_BUCKET, key=f"weather_{today_str}.csv")
+    file_exists_cloud = file_exists_in_s3(bucket_name=LAKE_BUCKET, key=f"weather_{date_str}.csv")
 
     if file_exists_local or file_exists_cloud:
-        print(f"Data for {today_str} already exists locally or in S3. Skipping fetch.")
+        print(f"Data for {date_str} already exists locally or in S3. Skipping fetch.")
         print(f"Local file exists: {file_exists_local}\nCloud file exists: {file_exists_cloud}")
         return
 
