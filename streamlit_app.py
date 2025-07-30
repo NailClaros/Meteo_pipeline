@@ -16,7 +16,7 @@ conn = psycopg2.connect(DB_URL)
 query = """
     SELECT * FROM "WeatherData"."formatted_weather_data"
     ORDER BY time DESC
-    LIMIT 100;
+    LIMIT 72;
 """
 df = pd.read_sql_query(query, conn)
 conn.close()
