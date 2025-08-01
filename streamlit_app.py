@@ -50,7 +50,8 @@ label_to_key = {f"{METRICS[k][0]} ({METRICS[k][1]})": k for k in METRICS}
 selected_labels = st.sidebar.multiselect(
     "Select metrics to show:",
     options=metric_options,
-    default=[f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})"]
+    default=[f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})",
+             f"{METRICS['cloud_cover_perc'][0]} ({METRICS['cloud_cover_perc'][1]})"]
 )
 selected_metrics = [label_to_key[label] for label in selected_labels if label in label_to_key]
 
@@ -97,7 +98,7 @@ for i, loc_id in enumerate(available_locations):
 
         # Selection for hover nearest hour
         hover = alt.selection_point(
-        fields=["hour_label"],
+        fields=["hour"],
         nearest=True,
         on="mouseover",
         empty="none",
@@ -122,8 +123,14 @@ for i, loc_id in enumerate(available_locations):
                         labelAngle=0
                     ),
                 ),
-                y=alt.Y("value:Q", title="Metric"),
-                color=alt.Color("metric:N", title="Metric"),
+                y=alt.Y("value:Q", title=None),
+                        color=alt.Color(
+                            "metric:N",
+                            title="Metric",
+                            scale=alt.Scale(scheme="category10"),
+                            legend=alt.Legend(orient="top", titleFontSize=12, labelFontSize=11),
+                        ),
+                                
             )
         )
 
@@ -143,18 +150,21 @@ for i, loc_id in enumerate(available_locations):
                 ],
             )
         )
-
+        summary = (
+                long_df.groupby(["hour", "hour_label"])
+                .apply(lambda g: ", ".join(f"{m}: {v:.1f}" for m, v in zip(g["metric"], g["value"])))
+                .reset_index(name="summary")
+            )
         # Vertical rule at hovered hour with tooltip
         rule = (
-            alt.Chart(long_df)
+            alt.Chart(summary)
             .mark_rule(color="gray")
             .encode(
                 x=alt.X("hour:O"),
                 opacity=alt.condition(hover, alt.value(1), alt.value(0)),
                 tooltip=[
                     alt.Tooltip("hour_label:N", title="Hour"),
-                    alt.Tooltip("metric:N", title="Metric"),
-                    alt.Tooltip("value:Q", title="Value", format=".2f"),
+                    alt.Tooltip("summary:N", title="Values")
                 ]
             )
             .add_params(hover)
