@@ -284,7 +284,7 @@ with col_main:
             clear="mouseout"
         )
 
-        # Line layer (unchanged)
+        # Line layer
         lines_week = (
             alt.Chart(long_week)
             .mark_line()
