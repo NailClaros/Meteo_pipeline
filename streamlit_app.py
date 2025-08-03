@@ -48,7 +48,7 @@ metric_options = [f"{name} ({unit})" for name, unit in (METRICS[m] for m in METR
 label_to_key = {f"{METRICS[k][0]} ({METRICS[k][1]})": k for k in METRICS}
 
 selected_labels = st.sidebar.multiselect(
-    "Select metrics to show:",
+    "Select metrics to show for the 3 graphs:",
     options=metric_options,
     default=[f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})",
              f"{METRICS['cloud_cover_perc'][0]} ({METRICS['cloud_cover_perc'][1]})"]
@@ -64,7 +64,7 @@ cols = st.columns(3)
 for i, loc_id in enumerate(available_locations):
     loc_df = df[df["location_id"] == loc_id]
     with cols[i % 3]:
-        st.subheader(f"📍 {loc_id}")
+        st.subheader(f"📍 {loc_id}", anchor= False)
         if loc_df.empty:
             st.warning("No data available.")
             continue
@@ -130,11 +130,9 @@ for i, loc_id in enumerate(available_locations):
                             scale=alt.Scale(scheme="category10"),
                             legend=alt.Legend(orient="top", titleFontSize=12, labelFontSize=11),
                         ),
-                                
             )
         )
 
-        # Points on hovered hour across all metrics
         points = (
             alt.Chart(long_df)
             .transform_filter(hover)
@@ -151,11 +149,18 @@ for i, loc_id in enumerate(available_locations):
             )
         )
         summary = (
-                long_df.groupby(["hour", "hour_label"])
-                .apply(lambda g: ", ".join(f"{m}: {v:.1f}" for m, v in zip(g["metric"], g["value"])))
-                .reset_index(name="summary")
-            )
-        # Vertical rule at hovered hour with tooltip
+                    long_df
+                    .groupby(["hour", "hour_label"], sort=False)
+                    .apply(
+                        lambda g: ", ".join(f"{m}: {v:.1f}" for m, v in zip(g["metric"], g["value"])),
+                        include_groups=False
+                    )
+                    .reset_index(name="summary")
+                )
+
+
+
+
         rule = (
             alt.Chart(summary)
             .mark_rule(color="gray")
@@ -170,10 +175,157 @@ for i, loc_id in enumerate(available_locations):
             .add_params(hover)
         )
 
-        # Compose layered chart; independent y-scales so mixed units don’t squash
         final_chart = (
             alt.layer(lines, points, rule)
             .resolve_scale(y="shared")
             .properties(width=350, height=350)
+            .interactive()
         )
         st.altair_chart(final_chart, use_container_width=True)
+
+
+# Mapping location IDs to friendly city names and reverse
+CITY_MAP = {
+    "CLT": "Charlotte",
+    "RAL": "Raleigh",
+    "GSB": "Greensboro"
+}
+REVERSE_CITY_MAP = {v: k for k, v in CITY_MAP.items()}
+
+st.markdown("---")
+st.header("📈 Weekly History", anchor= False)
+
+# Sidebar-like selectors (you can also place them inline)
+col_main, col_controls = st.columns([3, 1])
+
+with col_controls:
+    # 1. City selector (friendly name)
+    city_friendly = st.selectbox(
+        "Select City",
+        options=list(CITY_MAP.values()),
+        index=list(CITY_MAP.values()).index("Charlotte"),
+        key="weekly_city"
+    )
+    selected_location_id = REVERSE_CITY_MAP[city_friendly]
+
+    # 2. Metrics selector (friendly)
+    metric_options = [f"{METRICS[k][0]} ({METRICS[k][1]})" for k in METRICS]
+    label_to_key = {f"{METRICS[k][0]} ({METRICS[k][1]})": k for k in METRICS}
+    default_metrics = [
+        f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})",
+        f"{METRICS['cloud_cover_perc'][0]} ({METRICS['cloud_cover_perc'][1]})",
+        f"{METRICS['wind_speed_80m_mph'][0]} ({METRICS['wind_speed_80m_mph'][1]})",
+    ]
+    selected_labels_week = st.multiselect(
+        "Select metrics",
+        options=metric_options,
+        default=default_metrics,
+        key="weekly_metrics"
+    )
+    selected_metrics_week = [label_to_key[lbl] for lbl in selected_labels_week if lbl in label_to_key]
+    if not selected_metrics_week:
+        st.warning("Pick at least one metric for weekly history.")
+        st.stop()
+
+with col_main:
+    st.subheader(f"Past 7 Days — {city_friendly}", anchor= False)
+
+    # Query fresh weekly data for the selected city
+    try:
+        conn = psycopg2.connect(DB_URL)
+        query = """
+            SELECT *
+            FROM "WeatherData"."formatted_weather_data"
+            WHERE location_id = %s
+            AND time >= (date_trunc('day', now() AT TIME ZONE 'UTC') - INTERVAL '6 days')
+            AND time <  (date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day')
+            ORDER BY time desc
+            LIMIT 168;
+        """
+        week_df = pd.read_sql_query(query, conn, params=((CITY_MAP[selected_location_id],)))
+        conn.close()
+    except Exception as e:
+        st.error(f"Failed to fetch weekly data: {e}")
+        week_df = pd.DataFrame()  # fallback
+
+    if week_df.empty:
+        
+        st.info("No weekly data available for that selection.")
+    else:
+        # Prepare for plotting
+        week_df["time"] = pd.to_datetime(week_df["time"])
+        week_df["hour_label"] = week_df["time"].dt.strftime("%-I%p")
+        # Build long-form for selected metrics
+        records = []
+        for metric in selected_metrics_week:
+            display_name, unit = METRICS[metric]
+            tmp = week_df[["time", metric]].copy()
+            tmp = tmp.rename(columns={metric: "value"})
+            tmp["metric"] = f"{display_name} ({unit})"
+            # Keep raw time-series (no collapsing)
+            records.append(tmp[["time", "metric", "value"]])
+
+        long_week = pd.concat(records, ignore_index=True)
+
+        # Hover selection on time (nearest timestamp)
+        hover_time = alt.selection_point(
+            fields=["time"],
+            nearest=True,
+            on="mouseover",
+            empty="none",
+            clear="mouseout"
+        )
+
+        # Line layer
+        lines_week = (
+            alt.Chart(long_week)
+            .mark_line()
+            .encode(
+                x=alt.X("time:T", title="Time", axis=alt.Axis(format="%b %d %I %p")),
+                y=alt.Y("value:Q", title=None),
+                color=alt.Color("metric:N", title="Metric", scale=alt.Scale(scheme="category10")),
+                tooltip=[
+                    alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p"),
+                    alt.Tooltip("metric:N", title="Metric"),
+                    alt.Tooltip("value:Q", title="Value", format=".2f"),
+                ],
+            )
+        )
+
+        # Points and rule on hover
+        points_week = (
+            alt.Chart(long_week)
+            .transform_filter(hover_time)
+            .mark_circle(size=80)
+            .encode(
+                x="time:T",
+                y="value:Q",
+                color=alt.Color("metric:N", scale=alt.Scale(scheme="category10"), legend=None),
+                tooltip=[
+                    alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p"),
+                    alt.Tooltip("metric:N", title="Metric"),
+                    alt.Tooltip("value:Q", title="Value", format=".2f"),
+                ],
+            )
+        )
+
+        rule_week = (
+            alt.Chart(long_week)
+            .mark_rule(color="gray")
+            .encode(
+                x=alt.X("time:T"),
+                opacity=alt.condition(hover_time, alt.value(1), alt.value(0)),
+                tooltip=[alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p")],
+            )
+            .add_params(hover_time)
+        )
+
+        # Compose with independent y-scales
+        big_chart = (
+            alt.layer(lines_week, points_week, rule_week)
+            .resolve_scale(y="independent")
+            .properties(height=500)
+            .interactive()
+        )
+
+        st.altair_chart(big_chart, use_container_width=True)
