@@ -157,10 +157,7 @@ for i, loc_id in enumerate(available_locations):
                     )
                     .reset_index(name="summary")
                 )
-
-
-
-
+        
         rule = (
             alt.Chart(summary)
             .mark_rule(color="gray")
@@ -249,8 +246,8 @@ with col_main:
         week_df = pd.DataFrame()  # fallback
 
     if week_df.empty:
-        
         st.info("No weekly data available for that selection.")
+
     else:
         # Prepare for plotting
         week_df["time"] = pd.to_datetime(week_df["time"])
@@ -267,6 +264,17 @@ with col_main:
 
         long_week = pd.concat(records, ignore_index=True)
 
+        summary_week = (
+            long_week
+            .groupby(["time"], sort=False)
+            .apply(
+                lambda g: ", ".join(f"{m}: {v:.1f}" for m, v in zip(g["metric"], g["value"])),
+                include_groups=False
+            )
+            .reset_index(name="summary")
+        )
+
+
         # Hover selection on time (nearest timestamp)
         hover_time = alt.selection_point(
             fields=["time"],
@@ -276,14 +284,18 @@ with col_main:
             clear="mouseout"
         )
 
-        # Line layer
+        # Line layer (unchanged)
         lines_week = (
             alt.Chart(long_week)
             .mark_line()
             .encode(
                 x=alt.X("time:T", title="Time", axis=alt.Axis(format="%b %d %I %p")),
                 y=alt.Y("value:Q", title=None),
-                color=alt.Color("metric:N", title="Metric", scale=alt.Scale(scheme="category10")),
+                color=alt.Color(
+                    "metric:N", 
+                    title="Metric", 
+                    scale=alt.Scale(scheme="category10"),
+                    legend=alt.Legend(orient="top", titleFontSize=12, labelFontSize=11)),
                 tooltip=[
                     alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p"),
                     alt.Tooltip("metric:N", title="Metric"),
@@ -292,7 +304,7 @@ with col_main:
             )
         )
 
-        # Points and rule on hover
+        # Points at hovered time
         points_week = (
             alt.Chart(long_week)
             .transform_filter(hover_time)
@@ -309,13 +321,17 @@ with col_main:
             )
         )
 
+        # Rule with combined tooltip from summary_week
         rule_week = (
-            alt.Chart(long_week)
+            alt.Chart(summary_week)
             .mark_rule(color="gray")
             .encode(
                 x=alt.X("time:T"),
                 opacity=alt.condition(hover_time, alt.value(1), alt.value(0)),
-                tooltip=[alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p")],
+                tooltip=[
+                    alt.Tooltip("time:T", title="Time", format="%Y-%m-%d %I:%M %p"),
+                    alt.Tooltip("summary:N", title="All metrics"),
+                ],
             )
             .add_params(hover_time)
         )
@@ -323,7 +339,7 @@ with col_main:
         # Compose with independent y-scales
         big_chart = (
             alt.layer(lines_week, points_week, rule_week)
-            .resolve_scale(y="independent")
+            .resolve_scale(y="shared")
             .properties(height=500)
             .interactive()
         )
