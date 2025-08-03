@@ -4,25 +4,60 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 import altair as alt
-from datetime import datetime
+from datetime import datetime, date
 
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
+
+
+@st.cache_data(show_spinner=False)
+def fetch_today_data(db_url: str, today: date):
+    try:
+        conn = psycopg2.connect(db_url)
+        query = """
+            SELECT * FROM "WeatherData"."formatted_weather_data"
+            WHERE time >= NOW() - INTERVAL '24 hours'
+            ORDER BY time ASC
+            LIMIT 72;
+        """
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+    except Exception as e:
+        st.warning(f"fetch_today_data failed: {e}")
+        return pd.DataFrame()  # safe empty fallback
+    finally:
+        conn.close()
+
+@st.cache_data(show_spinner=True)
+def fetch_weekly_data(db_url: str, location_id: str, today: date):
+    try:
+        conn = psycopg2.connect(db_url)
+        query = """
+            SELECT *
+            FROM "WeatherData"."formatted_weather_data"
+            WHERE location_id = %s
+              AND time >= (date_trunc('day', now() AT TIME ZONE 'UTC') - INTERVAL '6 days')
+              AND time <  (date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day')
+            ORDER BY time ASC;
+        """
+        df = pd.read_sql_query(query, conn, params=(location_id,))
+        conn.close()
+        return df
+    except Exception as e:
+        st.warning(f"fetch_weekly_data failed: {e}")
+        return pd.DataFrame()
+    finally:
+        conn.close()
+
 
 st.set_page_config(layout="wide")
 st.title("🌤️ Nail's Weather Dashboard")
 st.write(f"Live hourly weather metrics from North Carolina cities.  Date: {datetime.now():%Y-%m-%d}")
 
-# Fetch data
-conn = psycopg2.connect(DB_URL)
-query = """
-    SELECT * FROM "WeatherData"."formatted_weather_data"
-    WHERE time >= NOW() - INTERVAL '24 hours'
-    ORDER BY time ASC
-    LIMIT 72;
-"""
-df = pd.read_sql_query(query, conn)
-conn.close()
+df = fetch_today_data(DB_URL, date.today())
+
+
 
 # Prepare time/hour labels
 df['time'] = pd.to_datetime(df['time'])
@@ -227,23 +262,7 @@ with col_controls:
 with col_main:
     st.subheader(f"Past 7 Days — {city_friendly}", anchor= False)
 
-    # Query fresh weekly data for the selected city
-    try:
-        conn = psycopg2.connect(DB_URL)
-        query = """
-            SELECT *
-            FROM "WeatherData"."formatted_weather_data"
-            WHERE location_id = %s
-            AND time >= (date_trunc('day', now() AT TIME ZONE 'UTC') - INTERVAL '6 days')
-            AND time <  (date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day')
-            ORDER BY time desc
-            LIMIT 168;
-        """
-        week_df = pd.read_sql_query(query, conn, params=((CITY_MAP[selected_location_id],)))
-        conn.close()
-    except Exception as e:
-        st.error(f"Failed to fetch weekly data: {e}")
-        week_df = pd.DataFrame()  # fallback
+    week_df = fetch_weekly_data(DB_URL, (CITY_MAP[selected_location_id],), date.today())
 
     if week_df.empty:
         st.info("No weekly data available for that selection.")
