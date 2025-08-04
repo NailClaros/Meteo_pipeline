@@ -72,3 +72,49 @@ Most charting libraries prefer a **long** structure:
 time           | metric           | value
 2025-08-04 01:00 | Temperature (°F) | 85.2
 2025-08-04 01:00 | Wind Speed (mph) | 5.6
+
+### 2. Efficient Time-Window Queries
+Instead of fetching all records, queries:
+
+WHERE time >= date_trunc('day', now() AT TIME ZONE 'UTC') - INTERVAL '6 days'
+  AND time <  date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day'
+
+This ensures:
+
+The app only loads relevant data
+
+No leakage into future timestamps
+
+Database load stays predictable
+
+3. Caching Layers
+Streamlit Cache (@st.cache_data):
+
+Avoids repeated fetches in the same app session/day
+
+Automatically invalidates when the date changes
+
+Redis Cache:
+
+Persists cooldown timers across multiple users/sessions
+
+Prevents refresh spamming even if someone tries to reload the page
+
+4. Backend & Data Engineering Skills Shown
+Backend Engineering
+
+Rate limiting & cooldown enforcement
+
+Parameterized SQL queries (SQL injection safe)
+
+Session tracking with Redis
+
+Data Engineering
+
+API ingestion
+
+Data normalization & cleaning
+
+Cloud storage integration
+
+Analytical queries with time-based filters
