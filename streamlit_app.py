@@ -119,7 +119,7 @@ with col1:
 
 
 st.set_page_config(layout="wide")
-st.title("🌤️ Nail's Weather Dashboard")
+st.title("🌤️ Nail's Weather Dashboard", anchor=False)
 st.write(f"Live hourly weather metrics from North Carolina cities.  Date: {datetime.now():%Y-%m-%d}")
 
 df = fetch_today_data(DB_URL, date.today(), st.session_state.refresh_bust)
