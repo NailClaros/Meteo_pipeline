@@ -106,6 +106,7 @@ with col1:
                 st.session_state.refresh_bust = int(time.time())  # trigger cache bust
             else:
                 # race or concurrent check fallback
+                st_autorefresh(interval=3000, key="live_cooldown", limit=11)
                 st.warning("Cooldown still active.",  width=250)
 
 with col1:
