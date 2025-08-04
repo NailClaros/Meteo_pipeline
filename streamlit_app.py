@@ -5,13 +5,55 @@ import os
 from dotenv import load_dotenv
 import altair as alt
 from datetime import datetime, date
+import time
+from streamlit_autorefresh import st_autorefresh
+import redis
+import uuid
+
+# This will cause the script to rerun every 1 second, enabling a live countdown.
+st_autorefresh(interval=1000, key="live_cooldown")
 
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
+COOLDOWN = 30 #seconds
+r = redis.Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=os.getenv("REDIS_PORT"),
+    decode_responses=True,
+    username=os.getenv("REDIS_UN"),
+    password=os.getenv("REDIS_PWD")
+)
 
+def can_refresh(key: str) -> bool:
+    now = int(time.time())
+    next_allowed = r.get(key)
+    if next_allowed is not None and now < int(next_allowed):
+        return False  # still cooling down
+    # set next_allowed with slight buffer
+    r.set(key, now + COOLDOWN, ex=COOLDOWN + 2)
+    return True
+
+def get_cooldown_remaining(key: str) -> int:
+    now = int(time.time())
+    next_allowed = r.get(key)
+    if next_allowed is None:
+        return 0
+    remaining = int(next_allowed) - now
+    return max(0, remaining)
+
+# --- persistent client identifier (survives refresh) ---
+if "client_key" not in st.session_state:
+    st.session_state.client_key = str(uuid.uuid4())
+if "refresh_bust" not in st.session_state:
+    st.session_state.refresh_bust = 0
+
+client_key = st.session_state.client_key
+
+def make_redis_key(client_key: str) -> str:
+    return f"cooldown:{client_key}"
 
 @st.cache_data(show_spinner=False)
-def fetch_today_data(db_url: str, today: date):
+def fetch_today_data(db_url: str, today: date, bust: int):
     try:
         conn = psycopg2.connect(db_url)
         query = """
@@ -30,7 +72,7 @@ def fetch_today_data(db_url: str, today: date):
         conn.close()
 
 @st.cache_data(show_spinner=True)
-def fetch_weekly_data(db_url: str, location_id: str, today: date):
+def fetch_weekly_data(db_url: str, location_id: str, today: date, bust: int):
     try:
         conn = psycopg2.connect(db_url)
         query = """
@@ -51,11 +93,35 @@ def fetch_weekly_data(db_url: str, location_id: str, today: date):
         conn.close()
 
 
+redis_key = make_redis_key(client_key)
+remaining = get_cooldown_remaining(redis_key)
+
+col1, col2 = st.columns([1, 3])
+with col1:
+    if remaining > 0:
+        st.button(f"🔄 Refresh ({remaining}s)", disabled=True)
+    else:
+        if st.button("🔄 Refresh"):
+            if can_refresh(redis_key):
+                st.session_state.refresh_bust = int(time.time())  # trigger cache bust
+            else:
+                # race or concurrent check fallback
+                st.warning("Cooldown still active.")
+
+with col1:
+    if remaining > 0:
+        st.info(f"Cooldown: {remaining}s until next refresh")
+    else:
+        st.success("Refresh available")
+
+
+
+
 st.set_page_config(layout="wide")
 st.title("🌤️ Nail's Weather Dashboard")
 st.write(f"Live hourly weather metrics from North Carolina cities.  Date: {datetime.now():%Y-%m-%d}")
 
-df = fetch_today_data(DB_URL, date.today())
+df = fetch_today_data(DB_URL, date.today(), st.session_state.refresh_bust)
 
 
 
@@ -259,10 +325,12 @@ with col_controls:
         st.warning("Pick at least one metric for weekly history.")
         st.stop()
 
+
 with col_main:
     st.subheader(f"Past 7 Days — {city_friendly}", anchor= False)
-
-    week_df = fetch_weekly_data(DB_URL, (CITY_MAP[selected_location_id],), date.today())
+    
+    week_df = fetch_weekly_data(DB_URL, (CITY_MAP[selected_location_id],), 
+                                date.today(), st.session_state.refresh_bust)
 
     if week_df.empty:
         st.info("No weekly data available for that selection.")
