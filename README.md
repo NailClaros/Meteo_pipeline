@@ -68,53 +68,40 @@ This app isn’t just charts — it’s a **full pipeline**:
 
 ### 1. **Long-Form Data for Visualization**
 Most charting libraries prefer a **long** structure:
-```text
-time           | metric           | value
-2025-08-04 01:00 | Temperature (°F) | 85.2
-2025-08-04 01:00 | Wind Speed (mph) | 5.6
 
-### 2. Efficient Time-Window Queries
-Instead of fetching all records, queries:
+### 2. **Transformation**
+- Timestamps are normalized and broken into user-friendly labels (e.g., `1PM`, `12AM`).  
+- Raw data is restructured into **long-form** (time, metric, value) which enables flexible charting:
+  ```text
+  time             | metric               | value
+  2025-08-04 01:00 | Temperature (°F)     | 85.2
+  2025-08-04 01:00 | Wind Speed @80m (mph)| 5.6
+  ```text
+  
+This makes it easier to:
+- Switch metrics dynamically
+- Apply color scales per metric
+- Group by time for comprehensive hover tooltips
 
-WHERE time >= date_trunc('day', now() AT TIME ZONE 'UTC') - INTERVAL '6 days'
-  AND time <  date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day'
+3. Cloud Storage & Persistence
+- Processed data is sent to AWS for staging (as part of the pipeline infrastructure).
+- Ultimately persisted in a Neon-hosted PostgreSQL database, enabling performant time-windowed analytical queries (e.g., last 7 days, today's date-based querying).
 
-This ensures:
+4. Caching & Rate Control
+-Streamlit Cache (@st.cache_data):
+-Caches “today” and weekly data per day to avoid unnecessary database hits during normal use.
 
-The app only loads relevant data
+Redis Cooldown System:
 
-No leakage into future timestamps
+- Tracks per-client, per-location refresh eligibility server-side.
+- Prevents refresh spamming even if users reload or try to cheat the frontend.
+- Maintains authoritative cooldown; the UI reflects it but is decoupled from Streamlit session volatility.
+- Note: Because Streamlit's session state can reset on browser refresh, the visual countdown might refresh too, but Redis still enforces the true cooldown behind the scenes.
 
-Database load stays predictable
+5. Visualization
+Built with Altair, offering:
+- Layered charts (lines + hover-highlighted points + rule)
+- Independent y-axis scaling (for mixed-unit metrics)Clean legend placement
+- Dynamic selection of cities and metrics
+- Combined summaries on hover (all metric values at a given time)
 
-3. Caching Layers
-Streamlit Cache (@st.cache_data):
-
-Avoids repeated fetches in the same app session/day
-
-Automatically invalidates when the date changes
-
-Redis Cache:
-
-Persists cooldown timers across multiple users/sessions
-
-Prevents refresh spamming even if someone tries to reload the page
-
-4. Backend & Data Engineering Skills Shown
-Backend Engineering
-
-Rate limiting & cooldown enforcement
-
-Parameterized SQL queries (SQL injection safe)
-
-Session tracking with Redis
-
-Data Engineering
-
-API ingestion
-
-Data normalization & cleaning
-
-Cloud storage integration
-
-Analytical queries with time-based filters
