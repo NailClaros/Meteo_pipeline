@@ -432,3 +432,54 @@ with col_main:
         )
 
         st.altair_chart(big_chart, use_container_width=True)
+
+with st.expander("ℹ️ About Me & System Architecture", expanded=True):
+    st.markdown("""
+**Who I Am**  
+My name is **Nail Claros**. I graduated from the **University of North Carolina at Charlotte** with a Bachelor's in Computer Science. I built this dashboard as a learning project to practice and demonstrate **real-world Data Engineering and Backend Engineering** skills end to end.
+
+**Project Purpose & Learning Goals**  
+This app was designed to internalize how data flows from external sources into structured, interactive insights. Key motivations:
+- Learn and apply the **data engineering pipeline**: ingestion, transformation, storage, caching, and presentation.
+- Practice **backend engineering** principles: reliable data access, rate-limiting (cooldown), session/state tracking, and integration with external systems.
+- Build **interactive, production-style visualizations** without a heavy frontend stack using Streamlit and Altair.
+
+**Core Pipeline (End-to-End Flow)**  
+1. **Data Ingestion**:  
+   The app calls an external weather API to retrieve raw hourly weather metrics for North Carolina cities.  
+2. **Staging & Transformation**:  
+   Retrieved data is written to intermediate storage, cleaned/formatted (e.g., timestamp normalization, human-readable labels), and prepared in “long form” for flexible visualization.  
+3. **Cloud Integration**:  
+   The processed data is sent to AWS (as part of the pipeline infrastructure) and ultimately persisted in a **PostgreSQL database hosted via Neon**—a modern cloud-native data store.  
+4. **Caching & Rate Control**:  
+   To reduce redundant load on the database, the app uses:
+   - `@st.cache_data` for in-app memoization scoped per day.
+   - **Redis** for enforcing cooldowns and tracking client refresh state.  
+     _Note:_ Streamlit’s session state is not fully persistent across all deployment edge cases, so while Redis is the authoritative source for cooldown/session tracking, the display-binding in this app can reflect limitations of Streamlit’s session lifecycle. In short: Redis stores the true cooldown/session data, but the UX layer may not always mirror long-lived session persistence due to Streamlit constraints.  
+5. **Presentation**:  
+   Data is surfaced in:
+   - Three compact real-time panels for current-hour metrics.
+   - A larger historical view with city and metric filters, hover summaries, and independent scaling per metric for clarity.
+
+**Why This Matters on a Resume**  
+This project demonstrates the following **Data Engineering** and **Backend Engineering** competencies in resume-friendly terms:
+
+- **Data Engineering**:
+  - Built and maintained an end-to-end data pipeline: API ingestion → transformation → cloud storage → analytical querying.  
+  - Implemented time-based data partitioning and rolling window historical queries (daily & weekly) for efficient consumption.  
+  - Designed long-form data representations to support flexible multidimensional visualizations.  
+  - Applied caching strategies (in-memory and external) to reduce redundant load and improve performance.  
+  - Integrated cloud-native database (Neon/PostgreSQL) for scalable persistence.
+
+- **Backend Engineering**:
+  - Engineered reliable data access layers with rate-limiting/cooldown logic using Redis to prevent abuse and protect downstream systems.  
+  - Managed session and client-state tracking in a distributed environment, reconciling UI-level session volatility (Streamlit) with authoritative Redis-backed state.  
+  - Structured parameterized database queries to ensure security and correctness.  
+  - Developed interactive APIs and UI hooking without a separate frontend framework, focusing on rapid iteration and maintainability.
+
+- **System Integration & Observability**:
+  - Orchestrated multi-service interactions (external weather API, AWS staging, database persistence, Redis caching) to create a cohesive, observable data product.  
+  - Provided meaningful UX feedback (cooldowns, hover summaries, error fallbacks) to surface system state and resilience.
+
+This little dashboard is more than charts—it's a concrete demonstration of how data-driven backend systems are designed, protected, and delivered to end users.
+""")
