@@ -11,7 +11,7 @@ import redis
 import uuid
 
 # This will cause the script to rerun every 1 second, enabling a live countdown.
-st_autorefresh(interval=1000, key="live_cooldown")
+st_autorefresh(interval=5000, key="live_cooldown", limit=100)
 
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
@@ -71,7 +71,7 @@ def fetch_today_data(db_url: str, today: date, bust: int):
     finally:
         conn.close()
 
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=False)
 def fetch_weekly_data(db_url: str, location_id: str, today: date, bust: int):
     try:
         conn = psycopg2.connect(db_url)
@@ -106,13 +106,13 @@ with col1:
                 st.session_state.refresh_bust = int(time.time())  # trigger cache bust
             else:
                 # race or concurrent check fallback
-                st.warning("Cooldown still active.")
+                st.warning("Cooldown still active.",  width=250)
 
 with col1:
     if remaining > 0:
         st.info(f"Cooldown: {remaining}s until next refresh")
     else:
-        st.success("Refresh available")
+        st.success("Refresh available incase of bad/outdated data", width=200)
 
 
 
