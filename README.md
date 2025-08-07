@@ -87,6 +87,27 @@ This makes it easier to:
 - Processed data is sent to AWS for staging (as part of the pipeline infrastructure).
 - Ultimately persisted in a Neon-hosted PostgreSQL database, enabling performant time-windowed analytical queries (e.g., last 7 days, today's date-based querying).
 
+##  AWS Scheduling & Operations
+
+- **Lambda + EventBridge (CloudWatch Events)**: Ingest pipeline triggered on a defined schedule using cron or fixed-rate rules. :contentReference[oaicite:5]{index=5}
+- **Logging & Monitoring**: Capture logs in CloudWatch Logs; use custom metrics and alarms for error tracking and performance thresholds. :contentReference[oaicite:6]{index=6}
+- **Tracing & Debugging**: Integrate AWS X-Ray or Lambda Powertools to visualize function internals and latency hotspots. :contentReference[oaicite:7]{index=7}
+
+##  Deployment & Packaging
+
+- **Local Dev**: Source code runs on Python 3.13.x, with Docker ensuring environment parity.
+- **Lambda Layers**: Heavy dependencies packaged separately for speed and modular deployment. :contentReference[oaicite:8]{index=8}
+- **CI Automation**: GitHub Actions or other CI tools automate packaging, testing, and deployment.
+
+##  Development Workflow
+
+1. Develop and test locally with minimal friction.
+2. Package using Docker for Linux compatibility.
+3. Deploy to AWS Lambda (via CI) and monitor through CloudWatch dashboards.
+4. Leverage alerts and tracing for observability.
+
+
+
 4. Caching & Rate Control
 -Streamlit Cache (@st.cache_data):
 -Caches “today” and weekly data per day to avoid unnecessary database hits during normal use.
