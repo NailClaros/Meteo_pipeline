@@ -436,51 +436,62 @@ with col_main:
 
 with st.expander("ℹ️ About Me & System Architecture", expanded=True):
     st.markdown("""
-**Who I Am**  
-My name is **Nail Claros**. I graduated from the **University of North Carolina at Charlotte** with a Bachelor's in Computer Science. I built this dashboard as a learning project to practice and demonstrate **real-world Data Engineering and Backend Engineering** skills end to end.
+## ℹ️ About Me & System Architecture
 
-**Project Purpose & Learning Goals**  
-This app was designed to internalize how data flows from external sources into structured, interactive insights. Key motivations:
-- Learn and apply the **data engineering pipeline**: ingestion, transformation, storage, caching, and presentation.
-- Practice **backend engineering** principles: reliable data access, rate-limiting (cooldown), session/state tracking, and integration with external systems.
-- Build **interactive, production-style visualizations** without a heavy frontend stack using Streamlit and Altair.
+### Who I Am  
+My name is Nail Claros. I am a Computer Science graduate from the University of North Carolina at Charlotte with a passion for backend and data engineering. I built this dashboard as a hands-on learning project to explore and demonstrate real-world skills involved in designing and deploying a full data pipeline—from raw data ingestion to interactive visualization.
 
-**Core Pipeline (End-to-End Flow)**  
-1. **Data Ingestion**:  
-   The app calls an external weather API to retrieve raw hourly weather metrics for North Carolina cities.  
-2. **Staging & Transformation**:  
-   Retrieved data is written to intermediate storage, cleaned/formatted (e.g., timestamp normalization, human-readable labels), and prepared in “long form” for flexible visualization.  
-3. **Cloud Integration**:  
-   The processed data is sent to AWS (as part of the pipeline infrastructure) and ultimately persisted in a **PostgreSQL database hosted via Neon**—a modern cloud-native data store.  
-4. **Caching & Rate Control**:  
-   To reduce redundant load on the database, the app uses:
-   - `@st.cache_data` for in-app memoization scoped per day.
-   - **Redis** for enforcing cooldowns and tracking client refresh state.  
-     _Note:_ Streamlit’s session state is not fully persistent across all deployment edge cases, so while Redis is the authoritative source for cooldown/session tracking, the display-binding in this app can reflect limitations of Streamlit’s session lifecycle. In short: Redis stores the true cooldown/session data, but the UX layer may not always mirror long-lived session persistence due to Streamlit constraints.  
-5. **Presentation**:  
-   Data is surfaced in:
-   - Three compact real-time panels for current-hour metrics.
-   - A larger historical view with city and metric filters, hover summaries, and independent scaling per metric for clarity.
+### Project Purpose & Learning Goals  
+This app was created to internalize and showcase the entire data engineering workflow and backend system integration. Key objectives included:
 
-**Why This Matters on a Resume**  
-This project demonstrates the following **Data Engineering** and **Backend Engineering** competencies in resume-friendly terms:
+- Mastering the data pipeline lifecycle: ingestion, transformation, cloud storage, caching, and visualization.
+- Applying backend engineering best practices such as reliable API integration, rate-limiting with Redis, session and state management, and seamless cloud service integration.
+- Building a production-style interactive dashboard without relying on heavy frontend frameworks, instead leveraging Streamlit and Altair for rapid development and elegant visualization.
 
-- **Data Engineering**:
-  - Built and maintained an end-to-end data pipeline: API ingestion → transformation → cloud storage → analytical querying.  
-  - Implemented time-based data partitioning and rolling window historical queries (daily & weekly) for efficient consumption.  
-  - Designed long-form data representations to support flexible multidimensional visualizations.  
-  - Applied caching strategies (in-memory and external) to reduce redundant load and improve performance.  
-  - Integrated cloud-native database (Neon/PostgreSQL) for scalable persistence.
+### Core Pipeline (End-to-End Flow)  
 
-- **Backend Engineering**:
-  - Engineered reliable data access layers with rate-limiting/cooldown logic using Redis to prevent abuse and protect downstream systems.  
-  - Managed session and client-state tracking in a distributed environment, reconciling UI-level session volatility (Streamlit) with authoritative Redis-backed state.  
-  - Structured parameterized database queries to ensure security and correctness.  
-  - Developed interactive APIs and UI hooking without a separate frontend framework, focusing on rapid iteration and maintainability.
+**Data Ingestion:**  
+The system pulls hourly weather data from an external API (Open-Meteo), targeting multiple cities in North Carolina and retrieving key metrics like temperature, wind speed, and cloud cover.
 
-- **System Integration & Observability**:
-  - Orchestrated multi-service interactions (external weather API, AWS staging, database persistence, Redis caching) to create a cohesive, observable data product.  
-  - Provided meaningful UX feedback (cooldowns, hover summaries, error fallbacks) to surface system state and resilience.
+**Staging & Transformation:**  
+Raw data is staged temporarily, then cleaned, normalized (including UTC timestamp standardization), and transformed into a long-form format that supports flexible and dynamic visualization.
 
-This little dashboard is more than charts—it's a concrete demonstration of how data-driven backend systems are designed, protected, and delivered to end users.
-""")
+**Cloud Integration:**  
+Processed data flows through AWS S3 as a data lake and is ultimately persisted in a PostgreSQL database hosted by Neon—a cloud-native, scalable solution optimized for analytical querying.
+
+**Caching & Rate Control:**  
+To improve performance and protect backend resources:  
+- Streamlit’s `@st.cache_data` decorator is used to memoize data fetches scoped to daily intervals.  
+- Redis manages cooldown periods and session refresh states at the server level to enforce rate limits and prevent request spamming.  
+*Note:* Because Streamlit’s session state is not fully persistent across all deployment scenarios, Redis remains the authoritative source for cooldown and session tracking. This design ensures backend integrity even if the frontend session lifecycle is volatile.
+
+**Presentation:**  
+The frontend delivers:  
+- Three compact, real-time metric panels for current-hour weather data.  
+- A comprehensive historical view that supports city and metric filtering, per-hour hover tooltips, and independently scaled y-axes for clarity across diverse units.
+
+---
+
+## 🛠 Skills and Impact
+
+This project is a tangible demonstration of advanced data engineering and backend engineering capabilities, including:
+
+**Data Engineering:**  
+- Constructed and maintained an end-to-end automated data pipeline integrating API ingestion, data transformation, cloud staging, and persistent storage.  
+- Designed data models using long-form structures for scalable and flexible multidimensional analytics.  
+- Applied effective caching strategies both in-memory (Streamlit) and distributed (Redis) to optimize performance and reduce redundant database queries.  
+- Implemented time-partitioned queries and rolling window analytics to enable efficient historical data exploration.
+
+**Backend Engineering:**  
+- Developed rate-limiting and cooldown mechanisms using Redis to safeguard backend services from overload and abuse.  
+- Navigated the complexities of session and client-state tracking in a stateless frontend framework, reconciling UI-level volatility with server-side persistence.  
+- Crafted secure, parameterized database queries and API endpoints emphasizing maintainability and scalability.  
+- Delivered a full-stack solution using Python without a dedicated frontend framework, showcasing rapid prototyping and production-readiness with Streamlit and Altair.
+
+**System Integration & Observability:**  
+- Orchestrated seamless interactions between multiple cloud services, including external APIs, AWS storage, database hosting, and Redis caching.  
+- Built a resilient system with robust logging, error handling, and user feedback mechanisms (cooldowns, tooltips, fallback messaging) to enhance usability and reliability.
+
+This dashboard is much more than a visualization tool — it embodies a comprehensive data-driven backend system engineered to ingest, process, protect, and deliver actionable insights to end users.
+ 
+                """)
