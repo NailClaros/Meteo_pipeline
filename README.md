@@ -29,10 +29,18 @@ This project is a complete end-to-end weather data pipeline and live dashboard t
    * AWS Lambda function triggered by EventBridge
    * Pulls hourly weather data every day (temperature, wind speed, cloud cover, etc.)
 
+AWS Lambda and Data Lake Integration
+The backbone of this pipeline is AWS Lambda. I wrote the logic in Python 3.13.5 and configured the function to automate data ingestion and processing at regular intervals. Deploying to Lambda revealed a number of practical challenges. I had to refactor and debug the code to meet the constraints of Lambda’s Linux environment. This included packaging dependencies correctly and handling compatibility issues using Docker, which proved invaluable in testing and simulating the deployment environment locally. Through this, I developed a deeper understanding of the AWS ecosystem, event-driven architectures, and the broader data engineering lifecycle, including how infrastructure and compute constraints shape production-ready solutions.
+
+AWS S3 serves as the data lake where all cleaned and processed weather data is stored in a structured and queryable format. This allowed me to simulate a real-world cloud data platform setup, integrating storage, compute, and orchestration seamlessly.
+
 2. **Data Processing**
 
    * Normalizes and reformats data into long-form structure
    * Cleans missing values and handles API edge cases
+
+Data Pipeline and API Integration
+The pipeline fetches live weather data from the Open-Meteo API. This component helped me strengthen my skills in building robust pipelines that handle data collection, transformation, and storage with reliability. I implemented logging, error handling, and retry mechanisms to ensure the system was stable under changing conditions. This reinforced my understanding of pipeline resilience and observability.
 
 3. **Storage**
 
@@ -56,6 +64,11 @@ This project is a complete end-to-end weather data pipeline and live dashboard t
    * Streamlit `@st.cache_data` used to locally cache daily and weekly data
    * Redis integrated to simulate a server-side cooldown system per city refresh
    * Although Streamlit doesn’t support persistent sessions, Redis logic was built anyway to understand production-ready session tracking and rate limiting
+
+Streamlit Dashboard with Caching and Redis
+To visualize the collected data, I built a dynamic and responsive dashboard using Streamlit and Altair. The dashboard allows users to explore temperature trends, wind conditions, and other weather metrics in a clean and interactive interface.
+
+I implemented session-based caching and connected Redis to experiment with storing session data. While Streamlit lacks persistent session tracking, I still integrated Redis to understand how session and state management would be implemented in a real-world deployment. Even though the limitation prevented full functionality, the experience gave me theoretical insight into managing application state in distributed dashboards.
 
 ---
 
