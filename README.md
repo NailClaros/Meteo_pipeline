@@ -4,104 +4,125 @@
 An **end-to-end Data Engineering + Backend Engineering** project that ingests live weather data, stores it in the cloud, and visualizes it with **interactive charts**.
 
 Built by **Nail Claros**, a Computer Science graduate from UNC Charlotte, as a way to **learn, practice, and showcase** real-world backend and data engineering skills.
+---
+
+# Weather Data Pipeline and Dashboard
+
+This project is a complete end-to-end weather data pipeline and live dashboard that ingests hourly weather data from the Open-Meteo API, processes and stores it using AWS and PostgreSQL, and visualizes it in an interactive frontend built with Streamlit and Altair.
 
 ---
 
-## 📌 Features
+## Overview
 
-- **Real-time Weather Data** – Hourly weather metrics for Charlotte, Raleigh, and Greensboro.
-- **Historical View** – Switch between cities and metrics to see the **last 7 days** of data.
-- **Interactive Charts** – Hover for detailed tooltips, compare metrics, and explore without page reloads.
-- **Custom Cooldown Logic** – Prevents excessive database queries using Redis-backed rate limiting.
-- **Daily Caching** – Automatically caches results for the day to reduce redundant calls.
-- **Fully Cloud-Integrated** – Uses Neon PostgreSQL for persistent storage and AWS for intermediate file storage.
-- **Backend-Focused Architecture** – Demonstrates API integration, caching, and scalable querying patterns.
+* Collects real-time weather data from the Open-Meteo API for cities like Charlotte, Raleigh, and Greensboro
+* Schedules and automates ingestion using AWS Lambda and EventBridge
+* Stores raw data in Amazon S3 and final processed data in PostgreSQL (Neon)
+* Provides a live interactive dashboard built with Streamlit and Altair
+* Includes caching and simulated session-based cooldown logic using Redis
 
 ---
 
-## 🛠 Architecture Overview
-
-This app isn’t just charts — it’s a **full pipeline**:
+## Architecture
 
 1. **Data Ingestion**
-   - Pulls raw weather data from an **external weather API**.
-   - Targets multiple cities with hourly granularity.
-   - Fetches core metrics:  
-     - 🌡 Temperature  
-     - ☁ Cloud Cover %  
-     - 🌬 Wind Speed  
-     - (Expandable for more)
 
-2. **Transformation**
-   - Normalizes timestamps into **UTC**.
-   - Renames and formats metrics into a **long-form** structure for better plotting flexibility.
-   - Adds human-readable labels (`12AM`, `3PM`, etc.).
+   * AWS Lambda function triggered by EventBridge
+   * Pulls hourly weather data every day (temperature, wind speed, cloud cover, etc.)
 
-3. **Cloud Storage**
-   - Intermediate files sent to **AWS**.
-   - Persistent storage in **PostgreSQL hosted via Neon** for:
-     - Fast analytical queries
-     - Rolling window historical views
+AWS Lambda and Data Lake Integration
+The backbone of this pipeline is AWS Lambda. I wrote the logic in Python 3.13.5 and configured the function to automate data ingestion and processing at regular intervals. Deploying to Lambda revealed a number of practical challenges. I had to refactor and debug the code to meet the constraints of Lambda’s Linux environment. This included packaging dependencies correctly and handling compatibility issues using Docker, which proved invaluable in testing and simulating the deployment environment locally. Through this, I developed a deeper understanding of the AWS ecosystem, event-driven architectures, and the broader data engineering lifecycle, including how infrastructure and compute constraints shape production-ready solutions.
 
-4. **Caching & Rate Limiting**
-   - **Streamlit `@st.cache_data`**  
-     - Stores results for **the current day**, avoiding duplicate fetches when possible.
-   - **Redis Cooldown System**  
-     - Enforces a **minimum refresh interval** (e.g., 30 seconds) to protect the database.
-     - Stores the true session refresh state in Redis.
-     - _Note:_ Due to Streamlit's session limitations, cooldown persistence is fully enforced server-side, but the countdown timer may reset visually when the app refreshes.
+AWS S3 serves as the data lake where all cleaned and processed weather data is stored in a structured and queryable format. This allowed me to simulate a real-world cloud data platform setup, integrating storage, compute, and orchestration seamlessly.
+
+2. **Data Processing**
+
+   * Normalizes and reformats data into long-form structure
+   * Cleans missing values and handles API edge cases
+
+Data Pipeline and API Integration
+The pipeline fetches live weather data from the Open-Meteo API. This component helped me strengthen my skills in building robust pipelines that handle data collection, transformation, and storage with reliability. I implemented logging, error handling, and retry mechanisms to ensure the system was stable under changing conditions. This reinforced my understanding of pipeline resilience and observability.
+
+3. **Storage**
+
+   * Raw data temporarily stored in S3
+   * Final processed data stored in PostgreSQL via Neon
+
+4. **Deployment & Compatibility**
+
+   * Developed locally with Python 3.13.5
+   * Used Docker to simulate AWS Lambda’s Linux environment
+   * Created Lambda Layers for managing external dependencies
 
 5. **Visualization**
-   - Uses **Altair** for responsive, interactive visualizations.
-   - Features:
-     - Multiple line charts
-     - Per-hour hover summaries
-     - Independent y-axis scaling per metric
-     - Legend placement for clarity
-   - Separate views:
-     - **Three small panels** for real-time metrics
-     - **One large panel** for weekly historical data
+
+   * Streamlit + Altair dashboard
+   * Allows city and metric switching in real-time
+   * Responsive Altair charts with interactive tooltips and independent y-axes
+
+6. **Performance Optimization**
+
+   * Streamlit `@st.cache_data` used to locally cache daily and weekly data
+   * Redis integrated to simulate a server-side cooldown system per city refresh
+   * Although Streamlit doesn’t support persistent sessions, Redis logic was built anyway to understand production-ready session tracking and rate limiting
+
+Streamlit Dashboard with Caching and Redis
+To visualize the collected data, I built a dynamic and responsive dashboard using Streamlit and Altair. The dashboard allows users to explore temperature trends, wind conditions, and other weather metrics in a clean and interactive interface.
+
+I implemented session-based caching and connected Redis to experiment with storing session data. While Streamlit lacks persistent session tracking, I still integrated Redis to understand how session and state management would be implemented in a real-world deployment. Even though the limitation prevented full functionality, the experience gave me theoretical insight into managing application state in distributed dashboards.
 
 ---
 
-## 🧠 Advanced Concepts Used
+## Key Features
 
-### 1. **Long-Form Data for Visualization**
-Most charting libraries prefer a **long** structure:
+* **Fully Serverless**: Powered by AWS Lambda and EventBridge
+* **Real-Time Data**: Ingests and updates weather data hourly
+* **Cloud-Native Storage**: Combines S3 and PostgreSQL (Neon) for scalability
+* **Cross-Platform Development**: Docker used for compatibility between Windows and Lambda
+* **Robust Error Handling**: Logs and manages API failures or missing values
+* **Simulated Session Management**: Redis logic included despite Streamlit limitations
+* **Interactive Dashboard**: Built with Streamlit and Altair for seamless data exploration
 
-### 2. **Transformation**
-- Timestamps are normalized and broken into user-friendly labels (e.g., `1PM`, `12AM`).  
-- Raw data is restructured into **long-form** (time, metric, value) which enables flexible charting:
-  ```text
-  time             | metric               | value
-  2025-08-04 01:00 | Temperature (°F)     | 85.2
-  2025-08-04 01:00 | Wind Speed @80m (mph)| 5.6
-  ```text
-  
-This makes it easier to:
-- Switch metrics dynamically
-- Apply color scales per metric
-- Group by time for comprehensive hover tooltips
+---
 
-3. Cloud Storage & Persistence
-- Processed data is sent to AWS for staging (as part of the pipeline infrastructure).
-- Ultimately persisted in a Neon-hosted PostgreSQL database, enabling performant time-windowed analytical queries (e.g., last 7 days, today's date-based querying).
+## Lessons Learned
 
-4. Caching & Rate Control
--Streamlit Cache (@st.cache_data):
--Caches “today” and weekly data per day to avoid unnecessary database hits during normal use.
+* Gained experience deploying Python projects to AWS Lambda
+* Learned how to package and manage dependencies with Lambda Layers and various Python versions
+* Improved understanding of Docker for cross-environment development
+* Practiced building a fault-tolerant ETL pipeline
+* Experimented with Redis and theoretical session management in a stateless frontend
+* Designed a user-friendly dashboard with high-performance visualizations
 
-Redis Cooldown System:
+---
 
-- Tracks per-client, per-location refresh eligibility server-side.
-- Prevents refresh spamming even if users reload or try to cheat the frontend.
-- Maintains authoritative cooldown; the UI reflects it but is decoupled from Streamlit session volatility.
-- Note: Because Streamlit's session state can reset on browser refresh, the visual countdown might refresh too, but Redis still enforces the true cooldown behind the scenes.
+## Stack
 
-5. Visualization
-Built with Altair, offering:
-- Layered charts (lines + hover-highlighted points + rule)
-- Independent y-axis scaling (for mixed-unit metrics)Clean legend placement
-- Dynamic selection of cities and metrics
-- Combined summaries on hover (all metric values at a given time)
+**Languages**: Python 3.13.5 + Python 3.12.x
+**Cloud**: AWS Lambda, Amazon S3, EventBridge
+**Database**: PostgreSQL (Neon)
+**Visualization**: Streamlit, Altair
+**Caching**: Redis, Streamlit `@st.cache_data`
+**Containerization**: Docker
 
+---
+
+## Future Improvements... One day
+
+* Host frontend with persistent session support (e.g., FastAPI + Redis)
+* Store full historical weather records for trend analysis (I have my AWS bucket to hold a weeks worth of data for the free tier)
+* Add forecast vs. actual weather comparisons
+* Implement email or Slack alerts for extreme weather events
+
+---
+
+## Running Locally
+
+1. Clone the repo
+2. Set up a `.env` file with your API keys and Redis/PostgreSQL credentials
+3. Run the Streamlit app with:
+
+```bash
+streamlit run app.py
+```
+
+## To get a similar result for aws lambda, I made a zip folder that lambda will accept in case you would like to try it at home as well. have fun!
