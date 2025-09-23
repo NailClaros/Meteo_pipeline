@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install boto3 psycopg2-binary pandas requests requests-cache retry-requests python-dotenv openmeteo-requests
+          pip install boto3 psycopg2-binary pandas requests requests-cache retry-requests python-dotenv openmeteo-requests pytest
 
       # Run a Python script against Postgres
       - name: Run Python Postgres client
