@@ -53,3 +53,6 @@ jobs:
           AWS_ACCESS_KEY_T: ${{ secrets.AWS_ACCESS_KEY_T }}
           AWS_SECRET_ACCESS_KEY_T: ${{ secrets.AWS_SECRET_ACCESS_KEY_T }}
           TBUCKET: ${{ secrets.TBUCKET }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_T }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_T }}
+          BUCKET: ${{ secrets.TBUCKET }}
