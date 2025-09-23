@@ -20,20 +20,31 @@ def db_conn():
 @pytest.fixture(autouse=True)
 def prepare_schema(db_conn):
     cur = db_conn.cursor()
+
+
+    # Create the table inside this schema
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS weather_data (
-            id SERIAL PRIMARY KEY,
-            location_id TEXT,
-            time TIMESTAMP,
-            temperature REAL
+        CREATE TABLE IF NOT EXISTS "aq_test_local".formatted_weather_data (
+            id                     integer generated always as identity primary key,
+            file_name              text                     not null,
+            location_id            text                     not null,
+            temp_f                 real                     not null,
+            cloud_cover_perc       real                     not null,
+            surface_pressure       real                     not null,
+            wind_speed_80m_mph     real                     not null,
+            wind_direction_80m_deg real                     not null,
+            time                   timestamp with time zone not null
         );
     """)
+    cur.execute('TRUNCATE TABLE "aq_test_local".formatted_weather_data RESTART IDENTITY CASCADE;')
     db_conn.commit()
     cur.close()
-    
-    # Clean before each test
+
+    yield  # hand control to the test
+
+    # Also clean up after test just in case
     cur = db_conn.cursor()
-    cur.execute("TRUNCATE weather_data;")
+    cur.execute('TRUNCATE TABLE "aq_test_local".formatted_weather_data RESTART IDENTITY CASCADE;')
     db_conn.commit()
     cur.close()
 
@@ -41,7 +52,7 @@ def prepare_schema(db_conn):
 def db_rows(db_conn):
     def _get_all():
         cur = db_conn.cursor()
-        cur.execute("SELECT id, location, sensor_name_units, measurement, date_inserted FROM sensor_data ORDER BY id;")
+        cur.execute('SELECT * FROM "aq_test_local".formatted_weather_data ORDER BY "Location_id";')
         rows = cur.fetchall()
         cur.close()
         return rows
