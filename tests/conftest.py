@@ -21,6 +21,8 @@ def db_conn():
 def prepare_schema(db_conn):
     cur = db_conn.cursor()
 
+    cur.execute('CREATE SCHEMA IF NOT EXISTS aq_test_local;')
+
 
     # Create the table inside this schema
     cur.execute("""
