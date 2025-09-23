@@ -1,0 +1,55 @@
+name: METEOS repo workflows and automated tests
+
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  postgres-job:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # Get repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Install Python 3.13.5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+
+      # Install deps
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3 psycopg2-binary pandas requests requests-cache retry-requests python-dotenv openmeteo-requests
+
+      # Run a Python script against Postgres
+      - name: Run Python Postgres client
+        run: pytest
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          AWS_ACCESS_KEY_T: ${{ secrets.AWS_ACCESS_KEY_T }}
+          AWS_SECRET_ACCESS_KEY_T: ${{ secrets.AWS_SECRET_ACCESS_KEY_T }}
+          TBUCKET: ${{ secrets.TBUCKET }}
