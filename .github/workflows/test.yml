@@ -50,9 +50,12 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
+
           AWS_ACCESS_KEY_T: ${{ secrets.AWS_ACCESS_KEY_T }}
           AWS_SECRET_ACCESS_KEY_T: ${{ secrets.AWS_SECRET_ACCESS_KEY_T }}
           TBUCKET: ${{ secrets.TBUCKET }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_T }}
+          
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_T }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_T }}
           BUCKET: ${{ secrets.TBUCKET }}
