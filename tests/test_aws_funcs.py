@@ -28,7 +28,7 @@ def test_list_files(s3_test_good_client, test_bucket, test_prefix, tmp_path):
     s3_test_good_client.upload_file(str(file_path), test_bucket, key)
 
     # run your function (prints only, so we just check no exceptions are raised)
-    list_files(test_bucket)
+    list_files(test_bucket, s3_test_good_client)
 
     # cleanup
     s3_test_good_client.delete_object(Bucket=test_bucket, Key=key)
@@ -58,7 +58,7 @@ def test_good_client_lists_files(s3_test_good_client, test_bucket, test_prefix, 
     s3_test_good_client.upload_file(str(file_path), test_bucket, key)
 
     # Use your list_files function to verify it "finds" the file
-    files = list_files(test_bucket)  # optionally, modify list_files to return keys
+    files = list_files(test_bucket, s3_test_good_client)  # optionally, modify list_files to return keys
     assert any(key in f for f in files)
 
     # Cleanup
@@ -67,14 +67,9 @@ def test_good_client_lists_files(s3_test_good_client, test_bucket, test_prefix, 
 
 
 def test_bad_client_raises_on_list(s3_test_bad_client, test_bucket):
-    # Temporarily replace the global s3 client with the bad one
-    import awsfuncs
-    original_s3 = awsfuncs.s3
-    awsfuncs.s3 = s3_test_bad_client
-
     # Expect a ClientError when calling list_files
     with pytest.raises(ClientError) as excinfo:
-        files = list_files(test_bucket)
+        files = list_files(test_bucket, s3_test_bad_client)
 
     # Check that the error code is a type of authentication failure
     assert excinfo.value.response["Error"]["Code"] in [
@@ -83,8 +78,6 @@ def test_bad_client_raises_on_list(s3_test_bad_client, test_bucket):
         "AccessDenied"
     ]
 
-    # Restore the original s3 client
-    awsfuncs.s3 = original_s3
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ import pandas as pd
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from datetime import datetime
-from awsfuncs import file_exists_in_s3, s3
+from awsfuncs import file_exists_in_s3, get_s3_client
 from io import StringIO
 load_dotenv()
 
@@ -28,7 +28,7 @@ def file_already_uploaded(cursor, filename, schema: str | None = None) -> bool:
     cursor.execute(query, (filename,))
     return cursor.fetchone()[0]
 
-def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema="WeatherData"):
+def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema="WeatherData", s3_client=None):
     if bucket_name is None:
         bucket_name = os.getenv("BUCKET_NAME")
     
@@ -36,9 +36,11 @@ def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema
     close_conn = False
     if conn is None:
         conn = psycopg2.connect(os.getenv("DB_URL"))
+        cursor = conn.cursor()
         close_conn = True
+    else:
+        cursor = conn.cursor()
     
-    cursor = conn.cursor()
     
     if filename is None:
         today_str = datetime.now().strftime("%Y-%m-%d")
@@ -63,14 +65,15 @@ def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema
         return
 
     # Download file from S3
-    s3 = boto3.client("s3")
+    if s3_client is None:
+        s3 = get_s3_client()
     obj = s3.get_object(Bucket=bucket_name, Key=filename)
     body = obj['Body'].read().decode("utf-8")
     df = pd.read_csv(StringIO(body))
 
     insert_query = f"""
         INSERT INTO "{schema}".formatted_weather_data (
-            file_name, location_id, temp_f, cloud_cover_perc, surface_pressure, 
+            File_name, location_id, temp_f, cloud_cover_perc, surface_pressure, 
             wind_speed_80m_mph, wind_direction_80m_deg, time
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
@@ -105,6 +108,7 @@ def upload_weather_data_to_s3_drain_bucket(bucket_name=os.getenv("BUCKET_NAME"),
     cursor = conn.cursor()
 
     try:
+        s3 = get_s3_client()
         response = s3.list_objects_v2(Bucket=bucket_name)
         if 'Contents' not in response:
             print(f"No files found in bucket '{bucket_name}'.")
@@ -129,7 +133,7 @@ def upload_weather_data_to_s3_drain_bucket(bucket_name=os.getenv("BUCKET_NAME"),
 
             insert_query = """
                 INSERT INTO "WeatherData".formatted_weather_data (
-                    "File_name", "location_id", "temp_F", "cloud_cover_perc", "surface_pressure", 
+                    file_name, "location_id", "temp_F", "cloud_cover_perc", "surface_pressure", 
                     "wind_speed_80m_mph", "wind_direction_80m_deg", "time"
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """

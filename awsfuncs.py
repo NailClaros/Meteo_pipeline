@@ -5,19 +5,20 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 load_dotenv()
 
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "___")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "___")
-AWS_REGION = os.getenv("AWS_REGION", "___")
+def get_s3_client():
+    """Returns an S3 client using credentials from environment variables."""
+    return boto3.client(
+        "s3",
+        region_name=os.getenv("AWS_REGION"),
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
 
-s3 = boto3.client(
-    "s3",
-    region_name=AWS_REGION,
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-)
-
-def list_files(bucket):
+def list_files(bucket, s3=None):
     """Lists all file names in the given S3 bucket and returns them."""
+    if s3 is None:
+        s3 = get_s3_client()
+
     response = s3.list_objects_v2(Bucket=bucket)
     if "Contents" in response:
         keys = [obj["Key"] for obj in response["Contents"]]
@@ -29,7 +30,7 @@ def list_files(bucket):
 def file_exists_in_s3(bucket_name, key, s3_client=None):
     """Checks if a file exists in S3 using provided client."""
     if s3_client is None:
-        s3_client = boto3.client("s3")
+        s3_client = get_s3_client()
     try:
         s3_client.head_object(Bucket=bucket_name, Key=key)
         return True
@@ -43,7 +44,7 @@ def file_exists_in_s3(bucket_name, key, s3_client=None):
 def upload_file(bucket, filepath, key, s3_client=None):
     """Uploads a file to the S3 bucket using the given s3_client, or default global client."""
     if s3_client is None:
-        s3_client = s3  # fallback to your global client
+        s3_client = get_s3_client()  # fallback to your global client
 
     try:
         exists_in_s3 = file_exists_in_s3(bucket, key, s3_client)

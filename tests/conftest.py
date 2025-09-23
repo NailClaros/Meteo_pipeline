@@ -28,7 +28,7 @@ def prepare_schema(db_conn):
     cur.execute("""
         CREATE TABLE IF NOT EXISTS "aq_test_local".formatted_weather_data (
             id                     integer generated always as identity primary key,
-            file_name              text                     not null,
+            File_name              text                     not null,
             location_id            text                     not null,
             temp_f                 real                     not null,
             cloud_cover_perc       real                     not null,
@@ -38,7 +38,6 @@ def prepare_schema(db_conn):
             time                   timestamp with time zone not null
         );
     """)
-    cur.execute('TRUNCATE TABLE "aq_test_local".formatted_weather_data RESTART IDENTITY CASCADE;')
     db_conn.commit()
     cur.close()
 
@@ -46,7 +45,7 @@ def prepare_schema(db_conn):
 
     # Also clean up after test just in case
     cur = db_conn.cursor()
-    cur.execute('TRUNCATE TABLE "aq_test_local".formatted_weather_data RESTART IDENTITY CASCADE;')
+    cur.execute('TRUNCATE TABLE "aq_test_local".formatted_weather_data;')
     db_conn.commit()
     cur.close()
 

@@ -1,6 +1,5 @@
 import pytest
 import pandas as pd
-from datetime import datetime
 from db import file_already_uploaded, upload_weather_data_to_db
 
 
@@ -22,7 +21,7 @@ def insert_dummy_weather_data(db_conn, df, filename="weather_test.csv"):
     cur = db_conn.cursor()
     insert_query = """
         INSERT INTO "aq_test_local".formatted_weather_data (
-            file_name, location_id, temp_f, cloud_cover_perc, surface_pressure,
+            File_name, location_id, temp_f, cloud_cover_perc, surface_pressure,
             wind_speed_80m_mph, wind_direction_80m_deg, time
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -65,7 +64,7 @@ def test_insert_data_and_count(db_conn, sample_weather_df):
     filename = insert_dummy_weather_data(db_conn, sample_weather_df)
 
     cur = db_conn.cursor()
-    cur.execute('SELECT COUNT(*) FROM "aq_test_local".formatted_weather_data WHERE file_name = %s;', (filename,))
+    cur.execute('SELECT COUNT(*) FROM "aq_test_local".formatted_weather_data WHERE File_name = %s;', (filename,))
     count = cur.fetchone()[0]
     cur.close()
 
@@ -76,7 +75,7 @@ def test_multiple_files_distinct(db_conn, sample_weather_df):
     insert_dummy_weather_data(db_conn, sample_weather_df, filename="file2.csv")
 
     cur = db_conn.cursor()
-    cur.execute('SELECT COUNT(DISTINCT "file_name") FROM "aq_test_local".formatted_weather_data;')
+    cur.execute('SELECT COUNT(DISTINCT file_name) FROM "aq_test_local".formatted_weather_data;')
     count = cur.fetchone()[0]
     cur.close()
 
@@ -97,7 +96,7 @@ def test_upload_weather_data_to_db_with_test_db(
 
     # Verify inserted rows
     cur = db_conn.cursor()
-    cur.execute('SELECT COUNT(*) FROM "aq_test_local".formatted_weather_data WHERE file_name = %s;', ("weather_test.csv",))
+    cur.execute('SELECT COUNT(*) FROM "aq_test_local".formatted_weather_data WHERE File_name = %s;', ("weather_test.csv",))
     count = cur.fetchone()[0]
     cur.close()
 

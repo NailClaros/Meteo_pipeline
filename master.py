@@ -1,14 +1,14 @@
 import os
 from weathercalls import fetch_and_save_weather_data
 from db import upload_weather_data_to_db
-from awsfuncs import file_exists_in_s3, s3, upload_file
+from awsfuncs import file_exists_in_s3, get_s3_client, upload_file
 from dotenv import load_dotenv
 from datetime import datetime
+import psycopg2
 
 load_dotenv()
 
 BUCKET_NAME = os.getenv("BUCKET_NAME")
-DB_URL = os.getenv("DB_URL")
 
 
 def run_pipeline():
@@ -31,8 +31,7 @@ def run_pipeline():
 
     # 3. Upload weather data from S3 directly to database (skips duplicates in DB)
     upload_weather_data_to_db(
-        bucket_name=BUCKET_NAME,
-        db_url=DB_URL
+        bucket_name=BUCKET_NAME
     )
 
 run_pipeline()
