@@ -92,3 +92,24 @@ def cleanup_test_bucket(s3_test_good_client, test_bucket, test_prefix):
     if "Contents" in response:
         for obj in response["Contents"]:
             s3_test_good_client.delete_object(Bucket=test_bucket, Key=obj["Key"])
+
+@pytest.fixture(
+    scope="function"
+)
+def make_test_file(tmp_path_factory):
+    from datetime import datetime
+    
+    tmp_dir = tmp_path_factory.mktemp("weather_test_data")
+
+    # default date
+    date = datetime.now().strftime("%Y-%m-%d")
+
+    # naming convention
+    filename = f"weather_{date}.csv"
+    output_path = tmp_dir / filename
+
+    # write a dummy file
+    output_path.write_text("dummy,data,already,exists")
+
+    return output_path
+
