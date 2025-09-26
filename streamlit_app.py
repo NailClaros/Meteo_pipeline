@@ -123,8 +123,7 @@ st.title("🌤️ Nail's Weather Dashboard", anchor=False)
 st.write(f"Live hourly weather metrics from North Carolina cities.  Date: {datetime.now():%Y-%m-%d}")
 
 df = fetch_today_data(DB_URL, date.today(), st.session_state.refresh_bust)
-
-
+df.columns = df.columns.str.lower()  # normalize column names
 
 # Prepare time/hour labels
 df['time'] = pd.to_datetime(df['time'])
@@ -137,7 +136,7 @@ available_locations = df['location_id'].dropna().unique()
 
 # Metric definitions: key -> (display name, unit)
 METRICS = {
-    "temp_F": ("Temperature", "°F"),
+    "temp_f": ("Temperature", "°F"),
     "cloud_cover_perc": ("Cloud Cover", "%"),
     "surface_pressure": ("Surface Pressure", "hPa"),
     "wind_speed_80m_mph": ("Wind Speed @80m", "mph"),
@@ -146,16 +145,18 @@ METRICS = {
 
 # Sidebar selector with friendly labels
 metric_options = [f"{name} ({unit})" for name, unit in (METRICS[m] for m in METRICS)]
-# Map friendly label back to metric key
+# Map friendly label back to lowercase metric key
 label_to_key = {f"{METRICS[k][0]} ({METRICS[k][1]})": k for k in METRICS}
 
 selected_labels = st.sidebar.multiselect(
     "Select metrics to show for the 3 graphs:",
-    options=metric_options,
-    default=[f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})",
+    options=[f"{METRICS[m][0]} ({METRICS[m][1]})" for m in METRICS],
+    default=[f"{METRICS['temp_f'][0]} ({METRICS['temp_f'][1]})",
              f"{METRICS['cloud_cover_perc'][0]} ({METRICS['cloud_cover_perc'][1]})"]
 )
-selected_metrics = [label_to_key[label] for label in selected_labels if label in label_to_key]
+
+# Ensure keys are lowercase to match DB
+selected_metrics = [label_to_key[label].lower() for label in selected_labels if label in label_to_key]
 
 if not selected_metrics:
     st.sidebar.warning("No metrics selected; please choose at least one.")
@@ -305,13 +306,12 @@ with col_controls:
         index=list(CITY_MAP.values()).index("Charlotte"),
         key="weekly_city"
     )
-    selected_location_id = REVERSE_CITY_MAP[city_friendly]
 
     # 2. Metrics selector (friendly)
     metric_options = [f"{METRICS[k][0]} ({METRICS[k][1]})" for k in METRICS]
     label_to_key = {f"{METRICS[k][0]} ({METRICS[k][1]})": k for k in METRICS}
     default_metrics = [
-        f"{METRICS['temp_F'][0]} ({METRICS['temp_F'][1]})",
+        f"{METRICS['temp_f'][0]} ({METRICS['temp_f'][1]})",
         f"{METRICS['cloud_cover_perc'][0]} ({METRICS['cloud_cover_perc'][1]})",
         f"{METRICS['wind_speed_80m_mph'][0]} ({METRICS['wind_speed_80m_mph'][1]})",
     ]
@@ -329,10 +329,11 @@ with col_controls:
 
 with col_main:
     st.subheader(f"Past 7 Days — {city_friendly}", anchor= False)
-    
-    week_df = fetch_weekly_data(DB_URL, (CITY_MAP[selected_location_id],), 
-                                date.today(), st.session_state.refresh_bust)
 
+    week_df = fetch_weekly_data(DB_URL, city_friendly, date.today(), 
+                                st.session_state.refresh_bust)
+    
+    week_df.columns = week_df.columns.str.lower()
     if week_df.empty:
         st.info("No weekly data available for that selection.")
 
