@@ -34,6 +34,8 @@ def run_pipeline():
         bucket_name=BUCKET_NAME
     )
 
+# Always keep this function at the bottom of the file
+# also keep it commented out when not in use for gitworkflows to run properly
 # run_pipeline()
 
 def run_pipeline_test(
