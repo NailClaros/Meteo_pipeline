@@ -66,14 +66,14 @@ def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema
 
     # Download file from S3
     if s3_client is None:
-        s3 = get_s3_client()
-    obj = s3.get_object(Bucket=bucket_name, Key=filename)
+        s3_client = get_s3_client()
+    obj = s3_client.get_object(Bucket=bucket_name, Key=filename)
     body = obj['Body'].read().decode("utf-8")
     df = pd.read_csv(StringIO(body))
 
     insert_query = f"""
         INSERT INTO "{schema}".formatted_weather_data (
-            File_name, location_id, temp_f, cloud_cover_perc, surface_pressure, 
+            file_name, location_id, temp_f, cloud_cover_perc, surface_pressure, 
             wind_speed_80m_mph, wind_direction_80m_deg, time
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """

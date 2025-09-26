@@ -21,10 +21,12 @@ def insert_dummy_weather_data(db_conn, df, filename="weather_test.csv"):
     cur = db_conn.cursor()
     insert_query = """
         INSERT INTO "aq_test_local".formatted_weather_data (
-            File_name, location_id, temp_f, cloud_cover_perc, surface_pressure,
+            file_name, location_id, temp_f, cloud_cover_perc, surface_pressure,
             wind_speed_80m_mph, wind_direction_80m_deg, time
-        )
+        ) 
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (file_name, location_id, time) DO NOTHING
+        
     """
     for _, row in df.iterrows():
         cur.execute(insert_query, (
@@ -101,3 +103,20 @@ def test_upload_weather_data_to_db_with_test_db(
     cur.close()
 
     assert count == len(sample_weather_df)
+
+def test_unique_constraint(db_conn, sample_weather_df, db_rows):
+    filename = "unique_test.csv"
+
+    insert_dummy_weather_data(db_conn, sample_weather_df, filename=filename)
+    
+    rows_before = db_rows()
+
+    assert len(rows_before) == len(sample_weather_df)
+
+
+    insert_dummy_weather_data(db_conn, sample_weather_df, filename=filename)
+    
+    rows_after = db_rows()
+    assert len(rows_after) == len(sample_weather_df)
+    assert rows_before == rows_after
+

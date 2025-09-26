@@ -17,25 +17,48 @@ def db_conn():
     yield conn
     conn.close()
 
+@pytest.fixture(scope="session")
+def bad_db_conn():
+    """A deliberately broken connection for negative testing."""
+    try:
+        conn = psycopg2.connect(
+            host="localhost", 
+            port="9999",      
+            user="wrong_user",
+            password="wrong_pass",
+            dbname="does_not_exist"
+        )
+    except Exception:
+        # Return a dummy object with .cursor() raising
+        class DummyConn:
+            def cursor(self, *args, **kwargs):
+                raise psycopg2.OperationalError("Bad test DB connection")
+            def close(self): pass
+        return DummyConn()
+
+    return conn
+
 @pytest.fixture(autouse=True)
 def prepare_schema(db_conn):
     cur = db_conn.cursor()
 
     cur.execute('CREATE SCHEMA IF NOT EXISTS aq_test_local;')
 
-
+    cur.execute('DROP TABLE IF EXISTS "aq_test_local".formatted_weather_data CASCADE;')
+    
     # Create the table inside this schema
     cur.execute("""
         CREATE TABLE IF NOT EXISTS "aq_test_local".formatted_weather_data (
             id                     integer generated always as identity primary key,
-            File_name              text                     not null,
+            file_name              text                     not null,
             location_id            text                     not null,
             temp_f                 real                     not null,
             cloud_cover_perc       real                     not null,
             surface_pressure       real                     not null,
             wind_speed_80m_mph     real                     not null,
             wind_direction_80m_deg real                     not null,
-            time                   timestamp with time zone not null
+            time                   timestamp with time zone not null,
+            constraint row_loc unique (file_name, location_id, time)
         );
     """)
     db_conn.commit()
@@ -53,9 +76,10 @@ def prepare_schema(db_conn):
 def db_rows(db_conn):
     def _get_all():
         cur = db_conn.cursor()
-        cur.execute('SELECT * FROM "aq_test_local".formatted_weather_data ORDER BY "Location_id";')
+        cur.execute('SELECT * FROM "aq_test_local".formatted_weather_data ORDER BY "location_id";')
         rows = cur.fetchall()
         cur.close()
+        print(rows)
         return rows
     return _get_all
 

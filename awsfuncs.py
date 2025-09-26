@@ -32,6 +32,10 @@ def file_exists_in_s3(bucket_name, key, s3_client=None):
     if s3_client is None:
         s3_client = get_s3_client()
     try:
+        if key is None:
+            return False
+        if bucket_name is None:
+            bucket_name = os.getenv("BUCKET_NAME")
         s3_client.head_object(Bucket=bucket_name, Key=key)
         return True
     except ClientError as e:
