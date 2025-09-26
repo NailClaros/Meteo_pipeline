@@ -34,7 +34,7 @@ def run_pipeline():
         bucket_name=BUCKET_NAME
     )
 
-run_pipeline()
+# run_pipeline()
 
 def run_pipeline_test(
     bucket_name=None,

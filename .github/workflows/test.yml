@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  postgres-job:
+  Automated_tests_for_METEOS_Repo:
     runs-on: ubuntu-latest
 
     services:
