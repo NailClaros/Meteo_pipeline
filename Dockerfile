@@ -1,7 +1,5 @@
-# Use official Python base image
 FROM python:3.12-slim
 
-# Set environment variables (no pyc, UTF-8)
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
@@ -17,8 +15,7 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the code (except what's in .dockerignore)
 COPY . .
 
-# Default command (can override in docker-compose)
+
 CMD ["python", "master.py"]
