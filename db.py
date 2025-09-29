@@ -28,7 +28,8 @@ def file_already_uploaded(cursor, filename, schema: str | None = None) -> bool:
     cursor.execute(query, (filename,))
     return cursor.fetchone()[0]
 
-def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema="WeatherData", s3_client=None):
+def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, 
+                              schema="WeatherData", s3_client=None, prefix=None):
     if bucket_name is None:
         bucket_name = os.getenv("BUCKET_NAME")
     
@@ -49,8 +50,14 @@ def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema
         if not filename.startswith("weather_") or not filename.endswith(".csv"):
             raise ValueError("Filename must start with 'weather_' and end with '.csv'")
 
-    # Check if file exists in S3
-    if not file_exists_in_s3(bucket_name, filename):
+    if s3_client is None:
+        s3_client = get_s3_client()
+
+    # Check if file exists in S3 and adjust for prefix
+    if prefix:
+        filename = f"{prefix}{filename}"
+
+    if not file_exists_in_s3(bucket_name, filename, s3_client):
         print(f"File {filename} does not exist in bucket {bucket_name}. Aborting.....")
         cursor.close()
         if close_conn:
@@ -65,8 +72,6 @@ def upload_weather_data_to_db(bucket_name=None, conn=None, filename=None, schema
         return
 
     # Download file from S3
-    if s3_client is None:
-        s3_client = get_s3_client()
     obj = s3_client.get_object(Bucket=bucket_name, Key=filename)
     body = obj['Body'].read().decode("utf-8")
     df = pd.read_csv(StringIO(body))

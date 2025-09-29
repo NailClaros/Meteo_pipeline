@@ -108,6 +108,7 @@ def run_pipeline_test(
             filename=filename,
             schema=schema,
             s3_client=s3_client,
+            prefix=prefix
         )
     except Exception as e:
         print(f"DB upload failed: {e}")
