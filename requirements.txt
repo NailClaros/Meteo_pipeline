@@ -55,7 +55,7 @@ tornado==6.5.1
 typing_extensions==4.14.1
 tzdata==2025.2
 url-normalize==2.2.1
-urllib3==2.5.0
+urllib3==2.6.0
 urllib3-future==2.13.900
 wassima==1.2.2
 watchdog==6.0.0
